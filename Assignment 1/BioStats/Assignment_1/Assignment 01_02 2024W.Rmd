@@ -1,0 +1,223 @@
+---
+title: "Assignment Classes 01-02"
+author: "GH"
+date: "2024-10-22"
+output:
+  word_document:
+    reference_docx: MB2-Rstudio-template.docx
+    toc: true
+  html_document:
+    df_print: paged
+    toc: true
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Instructions
+
+
+In this exercise you will create your *first own markdown report*. You will mostly perform analyses that we have already seen in the RStudio class, but with a different data set. This exercise should help you to setup your RStudio environment properly.
+
+Generate an R markdown report in which you perform the following analyses. Use 'MB2-Rstudio-template.docx' as template. (See the header above; it will automatically use this template, but you must have downloaded it into your R project folder.)
+
+- Please fill in text whenever you see XXX in this file. 
+
+- Please fill in R code whenever you see an (empty) code chunk field beginning with:
+
+```{r}
+# your R code:
+```
+
+
+*Finally, knit the markdown document and submit the knitted Word file!*
+
+## Authors of this assignment
+
+Please state name(s) and Matrikelnummer of all (up to 3) students who contributed to this assignment!
+
+1. Michael Adam, 01507402
+2. Aaron Paul Osburg, 12010313
+
+##### page break
+
+## Exercise 1
+
+Find medical papers of your choice (enter the DOI) in which data analysis is used to ...
+
+***
+
+* ... answer a descriptive research question. 
+
+DOI: https://doi.org/10.1038/s41591-024-03117-0
+
+Title of the paper: Disparities in air pollution attributable mortality in the US population by race/ethnicity and sociodemographic factors
+
+Describe the research question and give an explanation why you think it is a *descriptive* question:
+This paper estimates the degree to which premature mortality in the USA
+by race/ethnicity, education, rurality and social vulnerability can be
+attributed to differences in exposure and susceptibility to published
+particulate matter (PM2.5) air pollution estimates. This research
+question is descriptive because it describes the association of
+dependent variable (mortality by race, education,...) with independent
+variable(s) (air pollution estimates).
+
+
+***
+
+* ... answer a predictive research question. 
+
+DOI: https://doi.org/10.1177/2055217319885983
+
+Title of the paper: Machine learning in secondary progressive multiple sclerosis: an improved predictive model for short-term disability progression
+
+Describe the research question and give an explanation why you think it is a *predictive* question:
+This study evaluates individual and ensemble model performance built
+using decision tree (DT)-based algorithms compared to logistic
+regression (LR) and support vector machines (SVMs) for predicting
+secondary progressive multiple sclerosis (SPMS) disability progression.
+Each of these models addresses a predictive research question because
+they are designed to provide an accurate prediction of an outcome (SPMS
+disability progression).
+
+
+***
+
+* ... answer a causal research question. 
+
+DOI:  https://doi.org/10.1038/s41598-024-77131-0
+
+Title of the paper: Causal relationships between allergic and autoimmune diseases with chronic rhinosinusitis
+
+Describe the research question and give an explanation why you think it is a *causal* question:
+This study investigates the causal relationships between allergic and
+autoimmune diseases (AR, asthma, AD, and psoriasis) and Chronic
+rhinosinusitis (CRS). It is a causal research question because it
+explains how certain variables, in this case genetic variants associated
+with autoimmune/allergic diseases, (causally) affect an outcome, in this
+case being diagnosed with CRS.
+
+##### page break
+
+## Exercise 2
+
+Consider that you plan to perform a regression analysis to investigate the association of an outcome variable Y with 4 independent variables X1, X2, X3, X4. What properties of the data should be checked during an "initial data analysis"?
+
+1. The univariate distribution of the dependent and independent variables
+2. The association between the independent variables
+3. Missing values and patterns of missing values
+
+
+##### page break
+
+## Exercise 3
+
+
+
+
+
+
+### First, download the data set
+
+Just execute the R chunk below.
+
+```{r}
+url_diab <- "https://hbiostat.org/data/repo/diabetes.csv"
+diabetes <- read.csv(file=url_diab)
+head(diabetes)
+```
+
+
+The goal of the analysis is to estimate a descriptive model to describe the variation of `glyhb` as a linear function of `hdl`, `chol`, `age`, `gender`, `waist` circumference, `bp.1s` (systolic blood pressure)  and body-mass-index (weight in kg/height in m squared; $kg/m^2$).
+
+### Basic description of data set
+
+1. What is the number of observations and what is the number of variables in that data set?
+
+```{r}
+n_observations <- nrow(diabetes)
+n_variables <- ncol(diabetes)
+```
+
+Fill in: 
+
+- Number of observations: `r n_observations`
+- Number of variables: `r n_variables`
+
+### Generate new variable BMI
+
+2. Generate a new variable `BMI` in the data set by computing it from `weight` and `height`. Note that `height` is given in inches and `weight` in lb. The correct formula is given by $BMI = weight_{lb} / height_{inch}^2 \cdot 704.5$.
+
+```{r}
+diabetes$BMI <-  diabetes$weight / diabetes$height^2 * 704.5  
+```
+
+### Missing values
+
+3. Investigate the number of missing values per variable. Compute the number of complete observations with respect to the variables `chol`, `hdl`, `age`, `gender`, `bp1.s`, `BMI`, and `glyhb`.  
+
+```{r}
+n_missing_entries <- sapply(diabetes, function(x) sum(is.na(x)))
+n_complete_obsersavtions <- n_observations - n_missing_entries
+independent_variables = c("chol", "hdl", "age", "gender", "bp.1s", "BMI", "glyhb")
+print(n_complete_obsersavtions[independent_variables])
+```
+
+4. Generate histograms for all independent variable of the above-described descriptive model. Generate a table with means, standard deviations and number and proportion missing for all variables, using the function of the RStudio class (`mean.sd`).
+
+```{r}
+par(mfrow = c(2, 3))
+with(diabetes, {
+    hist(chol)
+    hist(hdl)
+    hist(age)
+    hist(bp.1s)
+    hist(BMI)
+    hist(glyhb)
+})
+par(mfrow = c(1, 1))
+
+
+independent_variable_data <- diabetes[independent_variables]
+independent_variable_data$gender[independent_variable_data$gender=="female"] <- 1
+independent_variable_data$gender[independent_variable_data$gender=="male"] <- 0
+independent_variable_data$gender <- as.numeric(independent_variable_data$gender)
+
+table = data.frame(
+  mean = sapply(independent_variable_data, function(x) mean(x, na.rm=T)),
+  sd = sapply(independent_variable_data, function(x) sd(x, na.rm=T)),
+  percentage_missing = sapply(independent_variable_data, function(x) mean(100*is.na(x)))
+)
+
+print(table)
+```
+
+5. Investigate the correlation between the independent variables by means of Spearman's correlation coefficients. You can also use code similar to the lecture, where a matrix of scatterplots and correlation coefficients is produced.
+
+```{r}
+cor(independent_variable_data, use="pairwise.complete.obs", method="spearman")
+pairs(formula = ~chol+hdl+age+gender+bp.1s+BMI+glyhb , data = independent_variable_data, main = "Scatterplot Matrix")
+
+
+```
+
+6. Provide an executive summary of the initial data analysis!
+
+Your executive summary of the initial data analysis:
+
+XXX
+
+7. Estimate the linear regression model `glyhb ~ chol + hdl + age + gender + waist + bp.1s + BMI`. Provide a summary of the model. Investigate the residuals of the model. What are possible violations of this model's assumptions?
+
+```{r}
+model <- lm(formula = glyhb ~ chol + hdl + age + gender + waist + bp.1s + BMI, data=diabetes)
+summary(model)
+plot(model)
+```
+
+
+Your conclusions about possible violations of assumptions of the model:
+
+XXX
