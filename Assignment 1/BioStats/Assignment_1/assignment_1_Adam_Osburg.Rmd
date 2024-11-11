@@ -207,7 +207,15 @@ pairs(formula = ~chol+hdl+age+gender+bp.1s+BMI+glyhb , data = independent_variab
 
 Your executive summary of the initial data analysis:
 
-XXX
+The univariate distributions of the continuous independent variables chol, age, BMI and bp.1s are 
+approximately normally distributed according to visual inspection of the histograms in 4.
+The univariate distributions of hdl and glyhb look skewed.
+
+Most variables have no or only weak correlations. However, stronger correlation was found between
+age and bp.s1/glyhb with Spearman correlation coefficients of 0.45/0.43 (see 5.).
+
+There are no missing values for age and gender and only very little missing values for the remaining independent variables
+chol, hdl, bp1.s and BMI as well as for the dependent variable glyhb (see 3.). 
 
 7. Estimate the linear regression model `glyhb ~ chol + hdl + age + gender + waist + bp.1s + BMI`. Provide a summary of the model. Investigate the residuals of the model. What are possible violations of this model's assumptions?
 
@@ -216,8 +224,15 @@ model <- lm(formula = glyhb ~ chol + hdl + age + gender + waist + bp.1s + BMI, d
 summary(model)
 plot(model)
 ```
-
+```{r}
+print(mean(residuals(model)))
+```
 
 Your conclusions about possible violations of assumptions of the model:
 
-XXX
+The QQ-Plot shows that the residuals are not normally distributed.
+The scale-location plot shows that the residuals tend to get larger for larger fitted values,
+therefore it seems like the homoscedacity assumption is mildly violated.
+Thus, not all assumptions of the linear regression model (as defined on slide
+35, lecture 1) are met.
+
