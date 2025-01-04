@@ -1,0 +1,105 @@
+---
+title: "Assignment Classes 03-07"
+author: "GH"
+date: "2024-10-22"
+output:
+  word_document:
+    reference_docx: MB2-Rstudio-template.docx
+    toc: true
+  html_document:
+    df_print: paged
+    toc: true
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Authors of this assignment
+Please state name(s) and Matrikelnummer of all (up to 3) students who contributed to this assignment!
+
+1. Michael Adam, 01507402
+2. Aaron Paul Osburg, 12010313
+
+
+## Exercise 1
+
+Develop a strategy to improve the linear regression model for this data set. What could be done to achieve a model fit that has less issues with residuals? First, develop a plan with several analysis strategies and summarize these ideas in written form. Second, carry out the analyses and check the resulting model(s) again. Third, describe your new model(s) appropriately. Fourth, write a summary discussing successes/failures of your strategies.
+
+Written description:
+The residuals are not normally distributed as the QQ-Plot of assignment 1 showed. This could be due to a wrong or incomplete choice of predictors or a non-normal distribution of the dependent variable. If the distribution of the dependent variable is
+not normal, one could try to apply a transformation such as a Box-Cox, a square root or a polynomial transformation.
+Otherwise, or if the problems remain after applying such a transformation, additional or different predictors (such as interaction and higher order terms, splines, or fractional polynomials) could be used instead. 
+
+Potentially better predictors could be found by using AIC-based model selection algorithms (starting from a model with higher-order terms such as a fully-quadratic model) or inspecting partial residual plots of the
+original predictors to deduce a suitable nonlinear transformation.  
+
+Perform analysis:
+```{r}
+library(mfp)
+library(splines)
+library(MASS)
+url_diab <- "https://hbiostat.org/data/repo/diabetes.csv"
+diabetes <- read.csv(file=url_diab)
+diabetes$BMI <-  diabetes$weight / diabetes$height^2 * 704.5  
+
+hist(diabetes$glyhb)
+```
+Clearly the distribution of glyhb strongly deviates from a normal distribution and is highly assymetric with a long tail on the right side. Therefore, we now determine a Box-Cox transformation starting from the model from assignment 1.
+
+```{r}
+model <- lm(glyhb ~ chol + hdl + age + gender + waist + bp.1s + BMI, data=diabetes)
+b <- boxcox(model)
+lambda <- b$x[which.max(b$y)]
+lambda
+
+hist((diabetes$glyhb^lambda - 1)/lambda)
+```
+The distribution of the dependent vairable looks much more symmetric and Gaussian-like now, even though it still does not perfectly look like a Gaussian. 
+
+```{r}
+model <- lm((glyhb^lambda - 1)/lambda ~ chol + hdl + age + gender + waist + bp.1s + BMI, data=diabetes)
+summary(model)
+plot(model)
+```
+
+The QQ-Plot shows that the are approximately normally distributed now. Deviations can only be seen in the tails.
+The scale-location plot shows that the tendency of the residuals to get larger for larger fitted values decreased compared to the original model from assignment 1.
+
+To further improve the model, we try to improve our choice of predictors by applying an AIC-based model selection
+starting from a fully-quadratic model (except for the quadratic term of the binary predictor gender).
+
+```{r}
+model <- lm((glyhb^lambda - 1)/lambda ~ (chol + hdl + age + gender + waist + bp.1s + BMI)^2 + I(chol^2) + I(hdl^2) + I(age^2) + I(waist^2) + I(bp.1s^2) + I(BMI^2), 
+data=na.omit(diabetes))
+model <- step(model)
+
+#model with the terms resulting from the reduction
+model <- lm((glyhb^lambda - 1)/lambda ~ chol + hdl + age + gender + waist + bp.1s + BMI + I(BMI^2) + chol:hdl + chol:BMI + age:bp.1s + age:gender + waist:bp.1s, data=diabetes)
+
+summary(model)
+plot(model)
+```
+The resulting model has the predictors
+
+(Intercept)       
+chol                
+hdl                 
+age                   
+gendermale           
+waist                
+bp.1s                
+BMI 
+I(BMI^2)
+chol:hdl         
+chol:BMI         
+age:bp.1s          
+age:gendermale
+waist:bp.1s 
+
+With the new model, we achieve residuals which seem to be independent of the fitted
+value (Residuals vs. Fitted plot) and the scale-location plot shows that the tendency of the residuals to get larger for larger fitted values decreased compared to the original model from assignment 1.
+
+Unfortunately, some of the data (the ones including NAs had to be omitted for the model reduction). 
+
