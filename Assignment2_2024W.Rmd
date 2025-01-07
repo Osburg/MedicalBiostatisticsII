@@ -103,3 +103,76 @@ value (Residuals vs. Fitted plot) and the scale-location plot shows that the ten
 
 Unfortunately, some of the data (the ones including NAs had to be omitted for the model reduction). 
 
+TODO: add log() trafo and sqrt() trafo to analysis and state that the trafos are not suitable
+
+## Exercise 2
+
+With the diabetes data set, perform a different analysis strategy that is based on categorizing glyhb at 2 different values, and then performing two logistic regression models with the dichotomized glyhb values.
+
+First, discuss with your partners what could be suitable values at which glyhb could be categorized for analysis. In your considerations, take into account statistical properties of the cutpoints (enough data in all categories) and clinical relevance of the cutpoints! Let's assume your chosen cutpoints are g1 and g2.
+
+Second, create two new binary outcome variables glyhb1 and glyhb2, where glyhb1=1 if glyhb>g1 and 0 else, or NA if glyhb is missing, and glyhb2=1 if glyhb>g2 and 0 else, or NA if glyhb is missing. Evaluate which absolute number of persons and proportions have glyhb1=1 and glyhb2=1 and glyhb1=0 and glyhb2=0 by cross-tabulating glyhb1 and glyhb2.
+
+Third, fit two (separate) logistic regression models with glyhb1 and glyhb2 as outcome variables, using the same predictors as in Assignment 01-02. Check for nonlinear functional forms of continuous predictors. Describe the estimated associations of the predictors with the outcome variable in the model and its performance appropriately.
+
+Report the methods and the results as you would do for a medical paper. 
+
+Compare with your linear regression model of Exercise 1 of this assignment. How do the estimated associations of the predictors with the outcome variables compare? Are the results consistent to each other? What else can be learned here?
+
+
+Discussion of suitable thresholds:
+Commonly used threshold values for the glyhb value for healthy subjects are glyhb < 5.7%.
+Values between 5.7% and 6.4% are the range for prediabetes, and values above 6.5% are 
+are assumed to indicate diabetes. Therefore, we use g1=5.7% and g2=6.5% (see https://www.sciencedirect.com/topics/biochemistry-genetics-and-molecular-biology/glycated-hemoglobin). To check the
+validity of this choice with respect to the statistical properties in our dataset, 
+we display the absolute quantities of each category.
+
+```{r}
+g1 <- 5.7
+g2 <- 6.5
+
+diabetes$glyhb1 <- FALSE
+diabetes$glyhb1[diabetes$glyhb > g1] <- TRUE
+diabetes$glyhb1[is.na(diabetes$glyhb)] <- NA
+
+diabetes$glyhb2 <- FALSE
+diabetes$glyhb2[diabetes$glyhb > g2] <- TRUE
+diabetes$glyhb2[is.na(diabetes$glyhb)] <- NA
+
+
+table(diabetes$glyhb1)
+```
+
+```{r}
+table(diabetes$glyhb2)
+```
+
+There seem to be sufficient instances with each value for both glyhb1 and glyhb2. Next, we show the cross-table for glyhb1 glyhb2
+```{r}
+table(glyhb1=diabetes$glyhb1, glyhb2=diabetes$glyhb2)
+```
+It is expected behavior that there are no instances with glyhb2==TRUE and 
+glyhb1==FALSE, because g2>g1.
+Now, we fit two logistic regression models with the same predictors as in assignment 1 to the data
+
+```{r}
+model1 <- glm(glyhb1 ~ chol + hdl + age + gender + waist + bp.1s + BMI,family=binomial(link='logit'),data=diabetes)
+
+summary(model1)
+plot(model1)
+```
+
+```{r}
+model2 <- glm(glyhb2 ~ chol + hdl + age + gender + waist + bp.1s + BMI,family=binomial(link='logit'),data=diabetes)
+
+summary(model2)
+plot(model2)
+``` 
+The QQ-plot and scale-location plot for the second model (model2) do not look ideal. Therefore, we check for nonlinear functional forms of continuous predictors by using a 
+model with interaction and quadratic terms for all predictors except for gender (assuming
+the integer variables such as age are considered as continuous). Utilizing an AIC-based model reduction of a fully-quadratic model we determined the following model, which seems to perform better w.r.t to the
+appearance of the QQ-plot.
+```{r}
+model2 <- glm(glyhb1 ~ I(bp.1s^2) + I(BMI^2) + I(age^2) + age:hdl + bp.1s:BMI + waist:BMI + waist:bp.1s + hdl:bp.1s + hdl:waist + chol:hdl + chol:bp.1s , data=diabetes,family=binomial(link='logit'))
+plot(model2)
+```
