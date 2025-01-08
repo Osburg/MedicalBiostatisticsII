@@ -1,14 +1,11 @@
 ---
-title: "Assignment Classes 03-07"
-author: "GH"
-date: "2024-10-22"
+title: "2nd Assignment in Medical Biostatics II"
+date: "January 13, 2025"
 output:
   word_document:
     reference_docx: MB2-Rstudio-template.docx
-    toc: true
   html_document:
     df_print: paged
-    toc: true
 ---
 
 
@@ -17,25 +14,30 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## Authors of this assignment
-Please state name(s) and Matrikelnummer of all (up to 3) students who contributed to this assignment!
 
 1. Michael Adam, 01507402
 2. Aaron Paul Osburg, 12010313
 
-
 ## Exercise 1
+
+### Task
 
 Develop a strategy to improve the linear regression model for this data set. What could be done to achieve a model fit that has less issues with residuals? First, develop a plan with several analysis strategies and summarize these ideas in written form. Second, carry out the analyses and check the resulting model(s) again. Third, describe your new model(s) appropriately. Fourth, write a summary discussing successes/failures of your strategies.
 
-Written description:
+### Solution 
+
+#### Modelling Strategy 
+
 The residuals are not normally distributed as the QQ-Plot of assignment 1 showed. This could be due to a wrong or incomplete choice of predictors or a non-normal distribution of the dependent variable. If the distribution of the dependent variable is
-not normal, one could try to apply a transformation such as a Box-Cox, a square root or a polynomial transformation.
+not normal, one could try to apply a so-called Box-Cox transformation, a square root or a polynomial transformation.
 Otherwise, or if the problems remain after applying such a transformation, additional or different predictors (such as interaction and higher order terms, splines, or fractional polynomials) could be used instead. 
 
-Potentially better predictors could be found by using AIC-based model selection algorithms (starting from a model with higher-order terms such as a fully-quadratic model) or inspecting partial residual plots of the
-original predictors to deduce a suitable nonlinear transformation.  
+Potentially better predictors could be found by using AIC-based model selection algorithms (starting from a model with higher-order terms such as a fully-quadratic model) or inspecting partial residual plots of the original predictors to deduce a suitable nonlinear transformation.
 
-Perform analysis:
+#### Analysis 
+
+As a first step, we consider the glyhb distribution:
+
 ```{r}
 library(mfp)
 library(splines)
@@ -46,7 +48,7 @@ diabetes$BMI <-  diabetes$weight / diabetes$height^2 * 704.5
 
 hist(diabetes$glyhb)
 ```
-Clearly the distribution of glyhb strongly deviates from a normal distribution and is highly assymetric with a long tail on the right side. Therefore, we now determine a Box-Cox transformation starting from the model from assignment 1.
+Clearly, the distribution of glyhb strongly deviates from a normal distribution and is highly asymmetric with a long tail on the right side. To symmetrize the distribution, we determine a Box-Cox transformation starting from the model given in assignment 1:
 
 ```{r}
 model <- lm(glyhb ~ chol + hdl + age + gender + waist + bp.1s + BMI, data=diabetes)
@@ -56,7 +58,7 @@ lambda
 
 hist((diabetes$glyhb^lambda - 1)/lambda)
 ```
-The distribution of the dependent vairable looks much more symmetric and Gaussian-like now, even though it still does not perfectly look like a Gaussian. 
+The resulting distribution of the dependent variable looks more symmetric and Gaussian now, even though it still does not perfectly look like a Gaussian. To further evaluate the performance of the model, we consider the following plots:
 
 ```{r}
 model <- lm((glyhb^lambda - 1)/lambda ~ chol + hdl + age + gender + waist + bp.1s + BMI, data=diabetes)
@@ -64,11 +66,10 @@ summary(model)
 plot(model)
 ```
 
-The QQ-Plot shows that the are approximately normally distributed now. Deviations can only be seen in the tails.
-The scale-location plot shows that the tendency of the residuals to get larger for larger fitted values decreased compared to the original model from assignment 1.
+The QQ-Plot shows that the residuals are approximately normally distributed now and deviations can only be seen in the tails. In the original models these deviations where much more pronounced. The scale-location plot shows that the tendency of the residuals to get larger for larger fitted values decreased compared to the original model from assignment 1.
 
-To further improve the model, we try to improve our choice of predictors by applying an AIC-based model selection
-starting from a fully-quadratic model (except for the quadratic term of the binary predictor gender).
+To further improve the model, apply an AIC-based model selection
+starting from a fully-quadratic model (except for the quadratic term of the binary predictor gender): 
 
 ```{r}
 model <- lm((glyhb^lambda - 1)/lambda ~ (chol + hdl + age + gender + waist + bp.1s + BMI)^2 + I(chol^2) + I(hdl^2) + I(age^2) + I(waist^2) + I(bp.1s^2) + I(BMI^2), 
@@ -101,11 +102,13 @@ waist:bp.1s
 With the new model, we achieve residuals which seem to be independent of the fitted
 value (Residuals vs. Fitted plot) and the scale-location plot shows that the tendency of the residuals to get larger for larger fitted values decreased compared to the original model from assignment 1.
 
-Unfortunately, some of the data (the ones including NAs had to be omitted for the model reduction). 
+Unfortunately, some of the data (the ones including NAs) had to be omitted for the model reduction. 
 
 TODO: add log() trafo and sqrt() trafo to analysis and state that the trafos are not suitable
 
 ## Exercise 2
+
+### Task 
 
 With the diabetes data set, perform a different analysis strategy that is based on categorizing glyhb at 2 different values, and then performing two logistic regression models with the dichotomized glyhb values.
 
@@ -119,13 +122,12 @@ Report the methods and the results as you would do for a medical paper.
 
 Compare with your linear regression model of Exercise 1 of this assignment. How do the estimated associations of the predictors with the outcome variables compare? Are the results consistent to each other? What else can be learned here?
 
-
-Discussion of suitable thresholds:
+### Methods 
 Commonly used threshold values for the glyhb value for healthy subjects are glyhb < 5.7%.
-Values between 5.7% and 6.4% are the range for prediabetes, and values above 6.5% are 
-are assumed to indicate diabetes. Therefore, we use g1=5.7% and g2=6.5% (see https://www.sciencedirect.com/topics/biochemistry-genetics-and-molecular-biology/glycated-hemoglobin). To check the
+Values between 5.7% and 6.4% are correspond to prediabetes, and values above 6.5% are 
+are assumed to indicate diabetes (see https://www.sciencedirect.com/topics/biochemistry-genetics-and-molecular-biology/glycated-hemoglobin). Thus, we use the cutpoints g1=5.7% and g2=6.5%. To check the
 validity of this choice with respect to the statistical properties in our dataset, 
-we display the absolute quantities of each category.
+we check the absolute quantities of each category:
 
 ```{r}
 g1 <- 5.7
@@ -147,27 +149,35 @@ table(diabetes$glyhb1)
 table(diabetes$glyhb2)
 ```
 
-There seem to be sufficient instances with each value for both glyhb1 and glyhb2. Next, we show the cross-table for glyhb1 glyhb2
+Indeed, there are enough data points in all categories. The cross-table for glyhb1 and glyhb2,
 ```{r}
 table(glyhb1=diabetes$glyhb1, glyhb2=diabetes$glyhb2)
 ```
-It is expected behavior that there are no instances with glyhb2==TRUE and 
-glyhb1==FALSE, because g2>g1.
-Now, we fit two logistic regression models with the same predictors as in assignment 1 to the data
+confirms the expected behavior that there are no instances with glyhb2==TRUE and 
+glyhb1==FALSE, because g2>g1. We fit two logistic regression models to the dichotomized glhyb dataset, using the same predictors as in assignment 1.
 
 ```{r}
 model1 <- glm(glyhb1 ~ chol + hdl + age + gender + waist + bp.1s + BMI,family=binomial(link='logit'),data=diabetes)
-
-summary(model1)
-plot(model1)
 ```
 
 ```{r}
 model2 <- glm(glyhb2 ~ chol + hdl + age + gender + waist + bp.1s + BMI,family=binomial(link='logit'),data=diabetes)
-
-summary(model2)
-plot(model2)
 ``` 
+
+#### Results
+The model coefficients are given by:
+```{r}
+summary(model1)
+summary(model2)
+```
+
+To analyse the model performance on the datatsets we consider: 
+
+```{r}
+plot(model1)
+plot(model2)
+```
+
 The QQ-plot and scale-location plot for the second model (model2) do not look ideal. Therefore, we check for nonlinear functional forms of continuous predictors by using a 
 model with interaction and quadratic terms for all predictors except for gender (assuming
 the integer variables such as age are considered as continuous). Utilizing an AIC-based model reduction of a fully-quadratic model we determined the following model, which seems to perform better w.r.t to the
@@ -175,4 +185,21 @@ appearance of the QQ-plot.
 ```{r}
 model2 <- glm(glyhb1 ~ I(bp.1s^2) + I(BMI^2) + I(age^2) + age:hdl + bp.1s:BMI + waist:BMI + waist:bp.1s + hdl:bp.1s + hdl:waist + chol:hdl + chol:bp.1s , data=diabetes,family=binomial(link='logit'))
 plot(model2)
+```
+
+Alternative solution: 
+
+```{r}
+terms.fit.mfp <- predict(fit.mfp, type="terms", terms=c("chol", "hdl", "age", "waist", "bp.1s", "BMI"), ref=list(chol=, hdl=, age=, waist=, bp.1s=, BMI=))
+```
+
+```{r}
+library(ggplot2)
+ggplot(data=terms.fit.mfp$sbp, aes(variable, contrast)) + 
+  xlab("")  + 
+  ggtitle("", subtitle=paste("Reference =", terms.fit.mfp$sbp$ref[1])) +
+  geom_rug(data=crash2.train, aes(x=, y = NULL)) +
+  ylab("log odds ratio") + 
+  geom_line(colour="blue") + 
+  geom_ribbon(aes(ymin=contrast - 1.96*stderr, ymax=contrast + 1.96*stderr), alpha=0.2)
 ```
